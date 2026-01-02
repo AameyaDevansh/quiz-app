@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import ActionCard from "../components/ActionCard";
-import CreateRoomModal from "../components/CreateRoomModal";
-import JoinCodeModal from "../components/JoinCodeModal";
+import ActionCard from "../../components/dashboard/ActionCard";
+import CreateRoomModal from "../../components/dashboard/CreateRoomModal";
+import JoinCodeModal from "../../components/dashboard/JoinCodeModal";
 
 export default function DashboardPage() {
   const [openCreate, setOpenCreate] = useState(false);
