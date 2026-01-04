@@ -3,7 +3,7 @@ import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createClient } from "redis";
+import { getRedis } from "./config/redis";
 
 dotenv.config();
 
@@ -27,26 +27,10 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // later restrict this
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
-
-    // // --------------------
-    // // Redis Client
-    // // --------------------
-    // export const redis = createClient({
-    // url: process.env.REDIS_URL || "redis://localhost:6379",
-    // });
-
-    // redis.on("error", (err) => {
-    // console.error("Redis error:", err);
-    // });
-
-    // (async () => {
-    // await redis.connect();
-    // console.log("✅ Redis connected");
-    // })();
 
 // --------------------
 // Socket.IO Logic
@@ -56,7 +40,12 @@ io.on("connection", (socket) => {
 
   // CREATE ROOM
   socket.on("create-room", async ({ username }) => {
-    const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const redis = await getRedis();
+
+    const roomCode = Math.random()
+      .toString(36)
+      .substring(2, 8)
+      .toUpperCase();
 
     const roomData = {
       host: socket.id,
@@ -64,23 +53,20 @@ io.on("connection", (socket) => {
       status: "waiting",
     };
 
-    // await redis.set(`room:${roomCode}`, JSON.stringify(roomData));
+    await redis.set(`room:${roomCode}`, JSON.stringify(roomData));
 
     socket.join(roomCode);
-
-    socket.emit("room-created", {
-      roomCode,
-      roomData,
-    });
+    socket.emit("room-created", { roomCode, roomData });
 
     console.log(`🏠 Room created: ${roomCode}`);
   });
 
   // JOIN ROOM
   socket.on("join-room", async ({ roomCode, username }) => {
+    const redis = await getRedis();
     const roomKey = `room:${roomCode}`;
-    const room = await redis.get(roomKey);
 
+    const room = await redis.get(roomKey);
     if (!room) {
       socket.emit("error", { message: "Room not found" });
       return;
@@ -94,10 +80,9 @@ io.on("connection", (socket) => {
       score: 0,
     });
 
-    // await redis.set(roomKey, JSON.stringify(roomData));
+    await redis.set(roomKey, JSON.stringify(roomData));
 
     socket.join(roomCode);
-
     io.to(roomCode).emit("player-joined", roomData);
 
     console.log(`👤 ${username} joined room ${roomCode}`);
@@ -112,6 +97,12 @@ io.on("connection", (socket) => {
 // --------------------
 // Start Server
 // --------------------
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+async function startServer() {
+  await getRedis();
+
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer();
