@@ -11,19 +11,37 @@ export interface IUser extends Document {
     matches: number;
     accuracy: number;
   };
+  createdAt: Date;
+  updatedAt: Date;
 }
+
 
 const UserSchema = new Schema<IUser>(
   {
-    clerkId: { type: String, required: true, unique: true },
+    clerkId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
     username: { type: String, required: true },
+
     avatar: String,
+
     xp: { type: Number, default: 0 },
+
     badges: { type: [String], default: [] },
+
     stats: {
       wins: { type: Number, default: 0 },
       matches: { type: Number, default: 0 },
-      accuracy: { type: Number, default: 0 },
+      accuracy: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100,
+      },
     },
   },
   { timestamps: true }

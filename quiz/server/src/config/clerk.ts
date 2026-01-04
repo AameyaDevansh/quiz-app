@@ -1,9 +1,9 @@
 import { verifyToken } from "@clerk/backend";
 
-const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY as string;
+const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 
 if (!CLERK_SECRET_KEY) {
-  throw new Error("CLERK_SECRET_KEY not defined");
+  throw new Error("CLERK_SECRET_KEY is not defined");
 }
 
 export const verifyClerkToken = async (token: string) => {
