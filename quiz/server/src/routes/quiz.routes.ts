@@ -1,18 +1,15 @@
 import { Router } from "express";
 import { authMiddleware, AuthRequest } from "../middlewares/auth.middleware";
-import { createQuiz, getAllQuizzes } from "../services/quiz.service";
+import { getMe } from "../services/user.service";
 
 const router = Router();
 
-router.post("/", authMiddleware, async (req: AuthRequest, res) => {
-  const { title, questions } = req.body;
-  const quiz = await createQuiz(title, questions, req.user);
-  res.status(201).json(quiz);
-});
+router.get("/me", authMiddleware, (req: AuthRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
-router.get("/", async (_req, res) => {
-  const quizzes = await getAllQuizzes();
-  res.json(quizzes);
+  res.json(getMe(req.user));
 });
 
 export default router;
