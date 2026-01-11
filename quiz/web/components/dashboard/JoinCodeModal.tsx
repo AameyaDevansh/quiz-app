@@ -20,8 +20,8 @@ export default function JoinCodeModal({
   const handleJoin = () => {
     if (!roomCode.trim()) return;
     onJoin(roomCode.trim().toUpperCase());
-    onClose();
     setRoomCode("");
+    onClose();
   };
 
   return (
@@ -32,17 +32,16 @@ export default function JoinCodeModal({
         </h2>
 
         <input
-          type="text"
-          placeholder="Enter room code"
           value={roomCode}
           onChange={(e) => setRoomCode(e.target.value)}
+          placeholder="Enter room code"
           className="mb-4 w-full rounded-md bg-zinc-800 px-4 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
         />
 
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="rounded-md bg-zinc-700 px-4 py-2 text-sm text-white hover:bg-zinc-600"
+            className="rounded-md bg-zinc-700 px-4 py-2 text-sm hover:bg-zinc-600"
           >
             Cancel
           </button>
