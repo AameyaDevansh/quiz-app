@@ -17,22 +17,25 @@ export default function DashboardPage() {
 
   const [openCreate, setOpenCreate] = useState(false);
   const [openJoin, setOpenJoin] = useState(false);
-
   const [socket, setSocket] = useState<Socket | null>(null);
 
+  // -----------------------------------
+  // Sync user to MongoDB
+  // -----------------------------------
   useEffect(() => {
-  if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded || !isSignedIn) return;
 
-  const syncUser = async () => {
-    const token = await getToken();
-    if (!token) return;
+    const syncUser = async () => {
+      const token = await getToken();
+      if (!token) return;
 
-    const api = createApiClient(token);
-    await api.get("/users/me"); // 🔥 THIS CREATES USER IN MONGO
-  };
+      const api = createApiClient(token);
+      await api.get("/users/me");
+    };
 
-  syncUser();
-}, [isLoaded, isSignedIn]);
+    syncUser();
+  }, [isLoaded, isSignedIn]);
+
   // -----------------------------------
   // Initialize socket connection
   // -----------------------------------
@@ -46,12 +49,19 @@ export default function DashboardPage() {
       const s = createSocket(token);
       setSocket(s);
 
-      // ROOM CREATED
       s.on("room-created", ({ roomCode }) => {
         router.push(`/room/${roomCode}`);
       });
 
-      // ROOM ERROR
+      s.on("room-joined", ({ roomCode }) => {
+        router.push(`/room/${roomCode}`);
+      });
+
+      s.on("no-public-room", () => {
+        // auto-create a public room
+        s.emit("create-room", { visibility: "public" });
+      });
+
       s.on("room-error", ({ message }) => {
         alert(message);
       });
@@ -61,24 +71,30 @@ export default function DashboardPage() {
 
     return () => {
       socket?.off("room-created");
+      socket?.off("room-joined");
+      socket?.off("no-public-room");
       socket?.off("room-error");
     };
   }, [isLoaded, isSignedIn]);
 
-  if (!isLoaded) return null;
-  if (!isSignedIn) return null;
+  if (!isLoaded || !isSignedIn) return null;
 
   // -----------------------------------
   // Actions
   // -----------------------------------
-  const handleCreateRoom = () => {
+  const handleCreateRoom = (visibility: "public" | "private") => {
     if (!socket) return;
-    socket.emit("create-room");
+    socket.emit("create-room", { visibility });
   };
 
   const handleJoinRoom = (roomCode: string) => {
     if (!socket) return;
     socket.emit("join-room", { roomCode });
+  };
+
+  const handleJoinAnyRoom = () => {
+    if (!socket) return;
+    socket.emit("join-any-room");
   };
 
   return (
@@ -140,10 +156,7 @@ export default function DashboardPage() {
               icon="🎮"
               title="Create Room"
               description="Host a new quiz room"
-              onClick={() => {
-                setOpenCreate(true);
-                handleCreateRoom();
-              }}
+              onClick={() => setOpenCreate(true)}
             />
 
             <ActionCard
@@ -157,21 +170,21 @@ export default function DashboardPage() {
               icon="🎯"
               title="Join Random"
               description="Get matched instantly"
-              onClick={() => alert("Coming soon")}
+              onClick={handleJoinAnyRoom}
             />
           </div>
 
           <CreateRoomModal
             open={openCreate}
             onClose={() => setOpenCreate(false)}
+            onCreate={handleCreateRoom}
           />
 
           <JoinCodeModal
-  open={openJoin}
-  onClose={() => setOpenJoin(false)}
-  onJoin={handleJoinRoom}
-/>
-
+            open={openJoin}
+            onClose={() => setOpenJoin(false)}
+            onJoin={handleJoinRoom}
+          />
         </div>
       </main>
 
@@ -190,9 +203,14 @@ export default function DashboardPage() {
 
           <path
             fill="url(#waveGrad)"
-            d="M0,260 C250,220 500,300 750,260 C1000,220 1250,300 1500,260
-               C1750,220 2000,300 2250,260 C2500,220 2750,300 3000,260
-               L3000,400 L0,400 Z"
+            d="
+              M0,260
+              C250,220 500,300 750,260
+              C1000,220 1250,300 1500,260
+              C1750,220 2000,300 2250,260
+              C2500,220 2750,300 3000,260
+              L3000,400 L0,400 Z
+            "
           />
         </svg>
       </div>
@@ -202,19 +220,36 @@ export default function DashboardPage() {
           ========================= */}
       <style jsx global>{`
         @keyframes constellationFloat {
-          0% { transform: translate(0px, 0px); }
-          25% { transform: translate(50px, -30px); }
-          50% { transform: translate(-50px, -35px); }
-          75% { transform: translate(-50px, 60px); }
-          100% { transform: translate(0px, 0px); }
+          0% {
+            transform: translate(0px, 0px);
+          }
+          25% {
+            transform: translate(50px, -30px);
+          }
+          50% {
+            transform: translate(-50px, -35px);
+          }
+          75% {
+            transform: translate(-50px, 60px);
+          }
+          100% {
+            transform: translate(0px, 0px);
+          }
         }
+
         .animate-constellation {
           animation: constellationFloat 20s ease-in-out infinite;
         }
+
         @keyframes waveScroll {
-          from { transform: translateX(0); }
-          to { transform: translateX(-66.666%); }
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(-66.666%);
+          }
         }
+
         .animate-wave {
           animation: waveScroll 30s linear infinite;
         }
