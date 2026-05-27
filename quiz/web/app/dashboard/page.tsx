@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import ActionCard from "../../components/dashboard/ActionCard";
-import CreateRoomModal from "../../components/dashboard/CreateRoomModal";
-import JoinCodeModal from "../../components/dashboard/JoinCodeModal";
+import ActionCard from "../../components/dashboard/QuizCard";
+import CreateRoomModal from "../../components/modals/CreateRoomModal";
+import JoinCodeModal from "../../components/modals/JoinCodeModal";
 
 import { useClerkAuth } from "@/lib/clerk";
 import { createSocket } from "@/lib/socket";
