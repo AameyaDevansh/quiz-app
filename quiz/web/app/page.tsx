@@ -1,65 +1,90 @@
-import Image from "next/image";
+'use client';
+
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import Link from 'next/link';
 
 export default function Home() {
+  const { isSignedIn, isLoaded } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) router.replace('/dashboard');
+  }, [isLoaded, isSignedIn, router]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', padding: '2rem',
+      background: 'radial-gradient(ellipse 80% 60% at 50% -10%, #2a2060 0%, var(--bg) 60%)',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Grid lines */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
+        backgroundSize: '60px 60px', opacity: 0.3,
+        maskImage: 'radial-gradient(ellipse 70% 70% at 50% 50%, black, transparent)',
+      }} />
+
+      <div style={{ position: 'relative', textAlign: 'center', maxWidth: 640 }} className="animate-fade-up">
+        <div className="mono" style={{
+          display: 'inline-block', padding: '4px 14px', marginBottom: '1.5rem',
+          border: '1px solid var(--accent-dim)', borderRadius: 20,
+          color: 'var(--accent-bright)', fontSize: '0.75rem', letterSpacing: '0.12em',
+          background: 'rgba(108,99,255,0.08)',
+        }}>
+          REAL-TIME · MULTIPLAYER · LIVE
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <h1 style={{
+          fontSize: 'clamp(3rem, 8vw, 5.5rem)', fontWeight: 800,
+          lineHeight: 1, letterSpacing: '-0.03em', marginBottom: '1.5rem',
+        }}>
+          Quiz<span style={{ color: 'var(--accent-bright)' }}>Arena</span>
+        </h1>
+
+        <p style={{
+          fontSize: '1.15rem', color: 'var(--text-muted)', lineHeight: 1.7,
+          marginBottom: '2.5rem', maxWidth: 480, margin: '0 auto 2.5rem',
+        }}>
+          Create rooms, challenge friends, and compete live.
+          See who's the fastest mind in real time.
+        </p>
+
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link href="/sign-up" style={{
+            padding: '0.875rem 2rem', borderRadius: 'var(--radius)',
+            background: 'var(--accent)', color: '#fff', fontWeight: 700,
+            fontSize: '0.95rem', letterSpacing: '0.02em',
+            transition: 'all 0.2s', boxShadow: '0 0 32px rgba(108,99,255,0.35)',
+          }}>
+            Get Started
+          </Link>
+          <Link href="/sign-in" style={{
+            padding: '0.875rem 2rem', borderRadius: 'var(--radius)',
+            border: '1px solid var(--border-bright)', color: 'var(--text)',
+            fontWeight: 600, fontSize: '0.95rem',
+            transition: 'all 0.2s',
+          }}>
+            Sign In
+          </Link>
         </div>
-      </main>
-    </div>
+
+        {/* Stats bar */}
+        <div style={{
+          display: 'flex', gap: '3rem', justifyContent: 'center', marginTop: '4rem',
+          paddingTop: '2rem', borderTop: '1px solid var(--border)',
+        }}>
+          {[['10ms', 'avg latency'], ['∞', 'questions'], ['live', 'leaderboard']].map(([val, label]) => (
+            <div key={label} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--accent-bright)' }}>{val}</div>
+              <div className="mono" style={{ fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
   );
 }
