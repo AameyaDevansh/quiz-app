@@ -76,10 +76,10 @@ export default function CreateRoomModal({ quiz, onClose, onCreate }: Props) {
           />
         </div>
 
-        <button onClick={submit} style={{
+        <button onClick={submit} className="tactile" style={{
           padding: '0.875rem', borderRadius: 'var(--radius-sm)',
           background: 'var(--accent)', color: '#fff', fontWeight: 700,
-          fontSize: '0.95rem', border: 'none',
+          fontSize: '0.95rem', border: 'none', boxShadow: '0 4px 0 var(--accent-dim)',
         }}>
           Create Room
         </button>

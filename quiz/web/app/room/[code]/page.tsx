@@ -5,6 +5,16 @@ import { useParams, useRouter } from "next/navigation";
 import { createSocket } from "@/lib/socket";
 import { useClerkAuth } from "@/lib/clerk";
 import { Socket } from "socket.io-client";
+import ProtectedRoute from "@/components/common/ProtectedRoute";
+import { useToasts, ToastStack } from "@/components/common/Toast";
+
+// Kahoot-style bold answer-block colors, cycled by option index.
+const ANSWER_COLORS = [
+  { bg: "var(--red)", dim: "var(--red-dim)" },
+  { bg: "var(--blue)", dim: "var(--blue-dim)" },
+  { bg: "var(--yellow)", dim: "var(--yellow-dim)", text: "#1a1025" },
+  { bg: "var(--green)", dim: "var(--green-dim)" },
+];
 
 type Phase = "waiting" | "question" | "reveal" | "ended";
 
@@ -53,9 +63,18 @@ interface QuizEnded {
 }
 
 export default function RoomPage() {
+  return (
+    <ProtectedRoute>
+      <RoomContent />
+    </ProtectedRoute>
+  );
+}
+
+function RoomContent() {
   const { code } = useParams<{ code: string }>();
   const router = useRouter();
   const { isLoaded, isSignedIn, getToken, user } = useClerkAuth();
+  const { toasts, showToast } = useToasts();
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
@@ -93,7 +112,7 @@ export default function RoomPage() {
       });
 
       s.on("room-error", ({ message }: { message: string }) => {
-        alert(message);
+        showToast(message, "error");
         router.push("/dashboard");
       });
 
@@ -151,10 +170,10 @@ export default function RoomPage() {
     };
   }, [phase, question?.questionIndex]);
 
-  if (!isLoaded || !isSignedIn) return null;
-  if (!room) {
+  if (!isLoaded || !isSignedIn || !room) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <ToastStack toasts={toasts} />
         <p className="mono" style={{ color: "var(--text-dim)" }}>joining room…</p>
       </div>
     );
@@ -179,6 +198,7 @@ export default function RoomPage() {
 
   return (
     <main style={{ minHeight: "100vh" }}>
+      <ToastStack toasts={toasts} />
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "1rem 1.5rem", borderBottom: "1px solid var(--border)",
@@ -191,7 +211,7 @@ export default function RoomPage() {
             {room.genre} · {room.visibility === "public" ? "🌍 public" : "🔒 private"}
           </p>
         </div>
-        <button onClick={handleLeave} style={{
+        <button onClick={handleLeave} className="tactile" style={{
           padding: "0.5rem 1rem", borderRadius: "var(--radius-sm)",
           border: "1px solid var(--border-bright)", background: "transparent",
           color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: 600,
@@ -267,10 +287,10 @@ function WaitingRoom({ room, isHost, currentClerkId, onStart }: {
 
       {isHost && (
         <div style={{ marginTop: "2.5rem", display: "flex", justifyContent: "center" }}>
-          <button onClick={onStart} disabled={room.players.length < 1} style={{
+          <button onClick={onStart} disabled={room.players.length < 1} className="tactile" style={{
             padding: "0.9rem 2.5rem", borderRadius: "var(--radius)",
             background: "var(--accent)", color: "#fff", fontWeight: 700,
-            fontSize: "1rem", border: "none",
+            fontSize: "1rem", border: "none", boxShadow: "0 4px 0 var(--accent-dim)",
           }}>
             Start Quiz
           </button>
@@ -318,18 +338,28 @@ function QuestionView({ question, timeLeft, answeredValue, answerResult, onAnswe
       </h2>
 
       {question.type === "MCQ" ? (
-        <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+        <div style={{ display: "grid", gap: "0.875rem", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           {question.options.map((opt, i) => {
             const isPicked = answeredValue === opt;
+            const color = ANSWER_COLORS[i % ANSWER_COLORS.length];
+            const locked = answeredValue !== null;
             return (
-              <button key={i} onClick={() => onAnswer(opt)} disabled={answeredValue !== null} style={{
-                padding: "1rem", borderRadius: "var(--radius-sm)", textAlign: "left",
-                border: "1px solid", borderColor: isPicked ? "var(--accent)" : "var(--border)",
-                background: isPicked ? "var(--accent-dim)" : "var(--surface)",
-                color: "var(--text)", fontSize: "0.95rem", fontWeight: 600,
-                opacity: answeredValue !== null && !isPicked ? 0.5 : 1,
-                cursor: answeredValue !== null ? "default" : "pointer",
-              }}>
+              <button
+                key={i}
+                onClick={() => onAnswer(opt)}
+                disabled={locked}
+                className={locked ? undefined : "tactile"}
+                style={{
+                  padding: "1.25rem", borderRadius: "var(--radius)", textAlign: "left",
+                  border: "none",
+                  background: color.bg,
+                  color: color.text ?? "#fff",
+                  fontSize: "1rem", fontWeight: 700,
+                  boxShadow: isPicked ? "0 0 0 4px var(--text)" : "0 4px 0 rgba(0,0,0,0.25)",
+                  opacity: locked && !isPicked ? 0.45 : 1,
+                  cursor: locked ? "default" : "pointer",
+                }}
+              >
                 {opt}
               </button>
             );
@@ -374,9 +404,10 @@ function BlankAnswerForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: 
           color: "var(--text)", fontSize: "1rem", outline: "none",
         }}
       />
-      <button onClick={() => value.trim() && onSubmit(value.trim())} disabled={disabled || !value.trim()} style={{
+      <button onClick={() => value.trim() && onSubmit(value.trim())} disabled={disabled || !value.trim()} className="tactile" style={{
         padding: "0 1.5rem", borderRadius: "var(--radius-sm)", border: "none",
         background: "var(--accent)", color: "#fff", fontWeight: 700,
+        boxShadow: "0 4px 0 var(--accent-dim)",
       }}>
         Submit
       </button>
@@ -423,10 +454,10 @@ function ResultsView({ final, currentClerkId, onBackToDashboard }: {
       <Leaderboard players={final.leaderboard} currentClerkId={currentClerkId} />
 
       <div style={{ marginTop: "2.5rem", display: "flex", justifyContent: "center" }}>
-        <button onClick={onBackToDashboard} style={{
+        <button onClick={onBackToDashboard} className="tactile" style={{
           padding: "0.875rem 2rem", borderRadius: "var(--radius)",
           background: "var(--accent)", color: "#fff", fontWeight: 700,
-          fontSize: "0.95rem", border: "none",
+          fontSize: "0.95rem", border: "none", boxShadow: "0 4px 0 var(--accent-dim)",
         }}>
           Back to Dashboard
         </button>

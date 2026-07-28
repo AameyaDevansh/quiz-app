@@ -59,9 +59,9 @@ export default function JoinRoomModal({ onClose, onJoin }: Props) {
           {error && <p style={{ color: 'var(--red)', fontSize: '0.85rem' }}>{error}</p>}
         </div>
 
-        <button onClick={submit} style={{
+        <button onClick={submit} className="tactile" style={{
           padding: '0.875rem', borderRadius: 'var(--radius-sm)',
-          background: 'var(--accent)',
+          background: 'var(--accent)', boxShadow: '0 4px 0 var(--accent-dim)',
           color: '#fff', fontWeight: 700, fontSize: '0.95rem', border: 'none',
         }}>
           Join Game

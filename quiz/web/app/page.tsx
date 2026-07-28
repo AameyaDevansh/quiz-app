@@ -17,7 +17,7 @@ export default function Home() {
     <main style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', padding: '2rem',
-      background: 'radial-gradient(ellipse 80% 60% at 50% -10%, #2a2060 0%, var(--bg) 60%)',
+      background: 'radial-gradient(ellipse 80% 60% at 50% -10%, var(--accent-dim) 0%, var(--bg) 60%)',
       position: 'relative', overflow: 'hidden',
     }}>
       {/* Grid lines */}
@@ -54,19 +54,18 @@ export default function Home() {
         </p>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Link href="/sign-up" style={{
+          <Link href="/sign-up" className="tactile" style={{
             padding: '0.875rem 2rem', borderRadius: 'var(--radius)',
             background: 'var(--accent)', color: '#fff', fontWeight: 700,
             fontSize: '0.95rem', letterSpacing: '0.02em',
-            transition: 'all 0.2s', boxShadow: '0 0 32px rgba(108,99,255,0.35)',
+            boxShadow: '0 0 32px rgba(255,62,154,0.4), 0 4px 0 var(--accent-dim)',
           }}>
             Get Started
           </Link>
-          <Link href="/sign-in" style={{
+          <Link href="/sign-in" className="tactile" style={{
             padding: '0.875rem 2rem', borderRadius: 'var(--radius)',
             border: '1px solid var(--border-bright)', color: 'var(--text)',
             fontWeight: 600, fontSize: '0.95rem',
-            transition: 'all 0.2s',
           }}>
             Sign In
           </Link>

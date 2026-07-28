@@ -56,15 +56,11 @@ export default function QuizCard({ quiz, onPlay, onDelete, isOwner }: Props) {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '0.75rem', marginTop: 'auto' }}>
-        <button onClick={() => onPlay(quiz)} style={{
+        <button onClick={() => onPlay(quiz)} className="tactile" style={{
           flex: 1, padding: '0.625rem 1rem', borderRadius: 'var(--radius-sm)',
           background: 'var(--accent)', color: '#fff', fontWeight: 700,
-          fontSize: '0.875rem', border: 'none',
-          transition: 'opacity 0.15s',
-        }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-        >
+          fontSize: '0.875rem', border: 'none', boxShadow: '0 3px 0 var(--accent-dim)',
+        }}>
           Host Game
         </button>
         {isOwner && onDelete && (
