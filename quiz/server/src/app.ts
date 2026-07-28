@@ -2,11 +2,12 @@ import express from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes/index";
 import { errorMiddleware } from "./middlewares/error.middleware";
+import { allowedOrigins } from "./config/cors";
 
 export const createApp = () => {
   const app = express();
 
-  app.use(cors());
+  app.use(cors({ origin: allowedOrigins }));
   app.use(express.json());
 
   app.get("/", (_req, res) => {

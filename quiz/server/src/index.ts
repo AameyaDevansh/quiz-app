@@ -6,6 +6,7 @@ import { createApp } from "./app";
 import { connectRedis } from "./config/redis";
 import { initSockets } from "./sockets/index";
 import { connectMongo } from "./config/mongo";
+import { allowedOrigins } from "./config/cors";
 
 const PORT = process.env.PORT || 4000;
 
@@ -17,7 +18,7 @@ async function startServer() {
 
   const io = new Server(server, {
     cors: {
-      origin: "*", // restrict later
+      origin: allowedOrigins,
       methods: ["GET", "POST"],
     },
   });
