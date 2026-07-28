@@ -30,7 +30,7 @@ export default function QuizCard({ quiz, onPlay, onDelete, isOwner }: Props) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <h3 style={{ fontWeight: 700, fontSize: '1rem', lineHeight: 1.3, flex: 1, marginRight: 8 }}>
-          {quiz.title}
+          {quiz?.title || "Untitled Quiz"}
         </h3>
         {isOwner && (
           <span className="mono" style={{
@@ -43,15 +43,15 @@ export default function QuizCard({ quiz, onPlay, onDelete, isOwner }: Props) {
         )}
       </div>
 
-      {quiz.description && (
+      {quiz?.description && (
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-          {quiz.description}
+          {quiz?.description || "Untitled Quiz"}
         </p>
       )}
 
       {/* Meta */}
       <div style={{ display: 'flex', gap: '1rem' }}>
-        <Chip label={`${quiz.questions.length} Qs`} />
+        <Chip label={`${quiz?.questions.length} Qs`} />
       </div>
 
       {/* Actions */}

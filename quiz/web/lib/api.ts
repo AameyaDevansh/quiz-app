@@ -1,11 +1,5 @@
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
-async function getToken(): Promise<string | null> {
-  // Clerk exposes getToken via useAuth hook in components.
-  // For non-hook contexts (server actions / util fns), pass token explicitly.
-  return null;
-}
-
 interface RequestOptions extends RequestInit {
   token?: string;
 }
@@ -61,84 +55,99 @@ export function createApiClient(token?: string) {
 }
 
 // ── Quiz endpoints (quiz.routes.ts) ──────────────────────────────────────────
+// Shape mirrors quiz/server/src/models/Quiz.model.ts exactly. `correctAnswer`
+// is deliberately absent — the server strips it from every REST response.
+
+export const GENRES = [
+  'general',
+  'geography',
+  'sport',
+  'history',
+  'entertainment',
+  'science',
+] as const;
+
+export type Genre = typeof GENRES[number];
+
+export interface Question {
+  question: string;
+  options?: string[];
+  type: 'MCQ' | 'BLANK';
+  timeLimit: number;
+  points: number;
+}
 
 export interface Quiz {
   _id: string;
   title: string;
   description?: string;
+  genre: string;
   questions: Question[];
-  createdBy: string;
+  createdBy: string | 'AI' | { _id: string; username: string };
   createdAt: string;
 }
 
-export interface Question {
-  _id: string;
-  text: string;
+// Used only inside the quiz-creation form's local state, before it's POSTed —
+// this is the one place `correctAnswer` legitimately exists client-side.
+export interface QuizDraftQuestion {
+  question: string;
   options: string[];
-  correctIndex: number;   // used server-side; won't be sent during active match
-  timeLimit: number;      // seconds
+  correctAnswer: string;
+  type: 'MCQ' | 'BLANK';
+  timeLimit: number;
+  points: number;
+}
+
+export interface CreateQuizInput {
+  title: string;
+  description?: string;
+  genre: string;
+  questions: QuizDraftQuestion[];
 }
 
 export const quizApi = {
-  list: (token: string) =>
-    request<Quiz[]>('/api/quiz', { token }),
+  list: (token: string, genre?: string) =>
+    request<Quiz[]>(`/api/quizzes${genre ? `?genre=${encodeURIComponent(genre)}` : ''}`, { token }),
 
   get: (id: string, token: string) =>
-    request<Quiz>(`/api/quiz/${id}`, { token }),
+    request<Quiz>(`/api/quizzes/${id}`, { token }),
 
-  create: (data: Partial<Quiz>, token: string) =>
-    request<Quiz>('/api/quiz', { method: 'POST', body: JSON.stringify(data), token }),
-
-  update: (id: string, data: Partial<Quiz>, token: string) =>
-    request<Quiz>(`/api/quiz/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
+  create: (data: CreateQuizInput, token: string) =>
+    request<Quiz>('/api/quizzes', { method: 'POST', body: JSON.stringify(data), token }),
 
   delete: (id: string, token: string) =>
-    request<{ ok: boolean }>(`/api/quiz/${id}`, { method: 'DELETE', token }),
-};
-
-// ── Room / Match endpoints ────────────────────────────────────────────────────
-
-export interface Room {
-  code: string;
-  quizId: string;
-  hostId: string;
-  players: Player[];
-  status: 'waiting' | 'active' | 'finished';
-}
-
-export interface Player {
-  userId: string;
-  username: string;
-  score: number;
-  avatar?: string;
-}
-
-export const roomApi = {
-  // TODO: adjust endpoint to match your router
-  create: (quizId: string, token: string) =>
-    request<Room>('/api/match/create', { method: 'POST', body: JSON.stringify({ quizId }), token }),
-
-  join: (code: string, token: string) =>
-    request<Room>(`/api/match/join/${code}`, { method: 'POST', token }),
-
-  get: (code: string, token: string) =>
-    request<Room>(`/api/match/${code}`, { token }),
+    request<{ ok: boolean }>(`/api/quizzes/${id}`, { method: 'DELETE', token }),
 };
 
 // ── User endpoints (user.routes.ts) ──────────────────────────────────────────
 
 export interface UserProfile {
-  _id: string;
+  id: string;
   clerkId: string;
   username: string;
-  email: string;
-  stats: { played: number; won: number; totalScore: number };
+  avatar?: string;
+  xp: number;
+  badges: string[];
+  stats: { wins: number; matches: number; accuracy: number };
+  createdAt: string;
+}
+
+export interface MatchSummary {
+  _id: string;
+  matchCode: string;
+  players: { _id: string; username: string; avatar?: string }[];
+  winner?: { _id: string; username: string; avatar?: string };
+  scores: Record<string, number>;
+  totalQuestions: number;
+  createdAt: string;
 }
 
 export const userApi = {
   me: (token: string) =>
-    request<UserProfile>('/api/user/me', { token }),
+    request<UserProfile>('/api/users/me', { token }),
+};
 
-  sync: (token: string) =>
-    request<UserProfile>('/api/user/sync', { method: 'POST', token }),
+export const matchApi = {
+  history: (token: string) =>
+    request<MatchSummary[]>('/api/users/me/matches', { token }),
 };

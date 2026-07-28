@@ -1,69 +1,40 @@
 import { Server, Socket } from "socket.io";
-import mongoose from "mongoose";
 import { redis } from "../config/redis";
-import { createMatch } from "../services/match.service";
-import { User } from "../models/User.model";
+import { metaKey } from "./roomState";
+import { startQuiz, submitAnswer, endQuiz, GameError } from "./gameEngine";
+import { AuthedUser } from "./room.socket";
 
-export const quizSocket = (io: Server, socket: Socket & { user?: any }) => {
-    //start quiz
-    socket.on("start-question", async ({ roomCode, questionIndex }) => {
-  const timerKey = `timer:${roomCode}:${questionIndex}`;
+type AuthedSocket = Socket & { user?: AuthedUser };
 
-  // Set TTL (15 seconds)
-  await redis.set(timerKey, "active", {
-    EX: 15,
+export const quizSocket = (io: Server, socket: AuthedSocket) => {
+  // Host-only: kicks off question 0 and the auto-advancing timer chain.
+  socket.on("start-quiz", async ({ roomCode }) => {
+    try {
+      await startQuiz(io, roomCode, socket.user!.clerkId);
+    } catch (err) {
+      const message = err instanceof GameError ? err.message : "Failed to start quiz";
+      socket.emit("room-error", { message });
+    }
   });
 
-  io.to(roomCode).emit("question-started", {
-    questionIndex,
-    duration: 15,
+  // Answers are scored server-side (timing included) and acked privately —
+  // the room-wide leaderboard only broadcasts once, at question-ended, so
+  // 100 simultaneous submits doesn't mean 100 leaderboard broadcasts.
+  socket.on("submit-answer", async ({ roomCode, questionIndex, answer }) => {
+    if (!roomCode || typeof questionIndex !== "number") return;
+
+    const result = await submitAnswer(roomCode, socket.user!.clerkId, questionIndex, answer);
+    if (result.duplicate) return;
+
+    socket.emit("answer-result", result);
   });
-});
 
-  // END QUIZ
-  socket.on("end-quiz", async ({ roomCode, totalQuestions }) => {
-    const key = `room:${roomCode}`;
-    const roomRaw = await redis.get(key);
-    if (!roomRaw) return;
+  // Manual abort escape hatch for the host — the primary flow is auto-advance.
+  socket.on("end-quiz", async ({ roomCode }) => {
+    if (!roomCode) return;
+    const host = await redis.hGet(metaKey(roomCode), "host");
+    if (host !== socket.user!.clerkId) return;
 
-    const room = JSON.parse(roomRaw);
-
-    // Determine winner
-    const sortedPlayers = [...room.players].sort(
-      (a, b) => b.score - a.score
-    );
-
-    const winnerClerkId = sortedPlayers[0]?.clerkId;
-
-    // Fetch Mongo users
-    const users = await User.find({
-      clerkId: { $in: room.players.map((p: any) => p.clerkId) },
-    });
-
-    const userMap = new Map(
-      users.map((u) => [u.clerkId, u._id])
-    );
-
-    const scores: Record<string, number> = {};
-    room.players.forEach((p: any) => {
-      scores[p.clerkId] = p.score;
-    });
-
-    // Persist match
-    await createMatch({
-      matchCode: roomCode,
-      players: users.map((u) => u._id),
-      winner: userMap.get(winnerClerkId),
-      scores,
-      totalQuestions,
-    });
-
-    // Cleanup Redis
-    await redis.del(key);
-
-    io.to(roomCode).emit("quiz-ended", {
-      winner: winnerClerkId,
-      scores,
-    });
+    await endQuiz(io, roomCode);
   });
 };

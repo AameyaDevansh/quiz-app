@@ -4,7 +4,7 @@ export interface IMatch extends Document {
   matchCode: string;
   players: mongoose.Types.ObjectId[];
   winner?: mongoose.Types.ObjectId;
-  scores: Record<string, number>;
+  scores: Map<string, number>;
   totalQuestions: number;
   createdAt: Date;
 }
