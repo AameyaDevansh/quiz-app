@@ -4,29 +4,27 @@ import { pubClient, subClient } from "../config/redis";
 import { roomSocket } from "./room.socket";
 import { quizSocket } from "./quiz.socket";
 import { verifyClerkToken } from "../config/clerk";
-
+import { startQuestionTimerWorker } from "../jobs/questionTimer";
+import { handleTimerJob } from "./gameEngine";
 
 interface SocketWithUser extends Socket {
   user?: {
     clerkId: string;
+    username: string;
+    avatar?: string;
   };
 }
 
 export const initSockets = (io: Server) => {
   // 🔁 Redis Adapter (MULTI-INSTANCE SUPPORT)
   io.adapter(createAdapter(pubClient, subClient));
-  //ttl timeout
-    io.adapter(createAdapter(pubClient, subClient));
 
-  subClient.subscribe("__keyevent@0__:expired", async (key) => {
-    if (!key.startsWith("timer:")) return;
+  // Question countdowns are driven by BullMQ delayed jobs (see
+  // jobs/questionTimer.ts) rather than Redis keyspace-expiry pub/sub —
+  // jobs persist in Redis and survive a restart, and any instance in the
+  // fleet can pick one up.
+  startQuestionTimerWorker((data) => handleTimerJob(io, data));
 
-    const [, roomCode, questionIndex] = key.split(":");
-
-    io.to(roomCode).emit("question-timeout", {
-      questionIndex: Number(questionIndex),
-    });
-  });
   // 🔐 Auth middleware
   io.use(async (socket: SocketWithUser, next) => {
     try {
@@ -39,7 +37,13 @@ export const initSockets = (io: Server) => {
       }
 
       const payload = await verifyClerkToken(token);
-      socket.user = { clerkId: payload.sub as string };
+      const clerkId = payload.sub as string;
+
+      const email = typeof payload.email === "string" ? payload.email : undefined;
+      const avatar = typeof payload.picture === "string" ? payload.picture : undefined;
+      const username = email ?? `user_${clerkId.slice(0, 6)}`;
+
+      socket.user = { clerkId, username, avatar };
 
       next();
     } catch (err) {

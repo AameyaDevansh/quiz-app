@@ -4,24 +4,18 @@ import { useState } from 'react';
 
 interface Props {
   onClose: () => void;
-  onJoin: (code: string) => Promise<void>;
+  onJoin: (code: string) => void;
 }
 
 export default function JoinRoomModal({ onClose, onJoin }: Props) {
   const [code, setCode]       = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
 
-  const submit = async () => {
+  const submit = () => {
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) { setError('Enter a room code'); return; }
-    setLoading(true); setError('');
-    try {
-      await onJoin(trimmed);
-      onClose();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to join room');
-    } finally { setLoading(false); }
+    onJoin(trimmed);
+    onClose();
   };
 
   return (
@@ -65,13 +59,12 @@ export default function JoinRoomModal({ onClose, onJoin }: Props) {
           {error && <p style={{ color: 'var(--red)', fontSize: '0.85rem' }}>{error}</p>}
         </div>
 
-        <button onClick={submit} disabled={loading} style={{
+        <button onClick={submit} style={{
           padding: '0.875rem', borderRadius: 'var(--radius-sm)',
-          background: loading ? 'var(--accent-dim)' : 'var(--accent)',
+          background: 'var(--accent)',
           color: '#fff', fontWeight: 700, fontSize: '0.95rem', border: 'none',
-          opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer',
         }}>
-          {loading ? 'Joining…' : 'Join Game'}
+          Join Game
         </button>
       </div>
     </div>
