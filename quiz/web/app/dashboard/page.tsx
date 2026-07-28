@@ -6,6 +6,8 @@ import ActionTile from "../../components/dashboard/ActionTile";
 import QuizBrowser from "../../components/dashboard/QuizBrowser";
 import CreateRoomModal from "../../components/modals/CreateRoomModal";
 import JoinCodeModal from "../../components/modals/JoinCodeModal";
+import ProtectedRoute from "../../components/common/ProtectedRoute";
+import { useToasts, ToastStack } from "../../components/common/Toast";
 
 import { useClerkAuth } from "@/lib/clerk";
 import { createSocket } from "@/lib/socket";
@@ -13,8 +15,17 @@ import { Socket } from "socket.io-client";
 import { userApi, type Quiz } from "@/lib/api";
 
 export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
+  );
+}
+
+function DashboardContent() {
   const router = useRouter();
   const { isLoaded, isSignedIn, getToken, user } = useClerkAuth();
+  const { toasts, showToast } = useToasts();
 
   const [token, setToken] = useState<string | null>(null);
   const [openJoin, setOpenJoin] = useState(false);
@@ -57,11 +68,11 @@ export default function DashboardPage() {
       });
 
       s.on("no-public-room", () => {
-        alert("No public rooms available right now — try creating one.");
+        showToast("No public rooms available right now — try creating one.", "info");
       });
 
       s.on("room-error", ({ message }) => {
-        alert(message);
+        showToast(message, "error");
       });
     };
 
@@ -75,7 +86,13 @@ export default function DashboardPage() {
     };
   }, [isLoaded, isSignedIn]);
 
-  if (!isLoaded || !isSignedIn || !token) return null;
+  if (!isLoaded || !isSignedIn || !token) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p className="mono" style={{ color: "var(--text-dim)", fontSize: "0.8rem" }}>loading…</p>
+      </div>
+    );
+  }
 
   // -----------------------------------
   // Actions
@@ -98,6 +115,7 @@ export default function DashboardPage() {
 
   return (
     <main style={{ position: "relative", minHeight: "100vh" }}>
+      <ToastStack toasts={toasts} />
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "3rem 1.5rem" }} className="animate-fade-up">
         <h1 style={{ fontSize: "2.25rem", fontWeight: 800, letterSpacing: "-0.02em", marginBottom: "0.5rem" }}>
           Welcome, <span style={{ color: "var(--accent-bright)" }}>{user?.firstName ?? "Quizzard"}</span>
