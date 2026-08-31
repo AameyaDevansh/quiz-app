@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { GENRES, quizApi, userApi, type Quiz, type QuizDraftQuestion } from '@/lib/api';
 import QuizCard from './QuizCard';
 import CreateQuizModal from '../modals/CreateQuizModal';
+import AIQuizModal from '../modals/AIQuizModal';
 
 interface Props {
   token: string;
@@ -12,20 +13,22 @@ interface Props {
 
 export default function QuizBrowser({ token, onSelectQuiz }: Props) {
   const [genre, setGenre] = useState<string>(GENRES[0]);
+  const [mode, setMode] = useState<'classic' | 'ai'>('classic');
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAI, setShowAI] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await quizApi.list(token, genre);
+      const list = await quizApi.list(token, genre, mode);
       setQuizzes(list);
     } finally {
       setLoading(false);
     }
-  }, [token, genre]);
+  }, [token, genre, mode]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -45,6 +48,10 @@ export default function QuizBrowser({ token, onSelectQuiz }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={() => setMode('classic')} style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border)', background: mode === 'classic' ? 'var(--accent)' : 'var(--surface)', color: mode === 'classic' ? '#fff' : 'var(--text-muted)', fontWeight: 700 }}>Classic genre quizzes</button>
+        <button onClick={() => setMode('ai')} style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border)', background: mode === 'ai' ? 'var(--accent)' : 'var(--surface)', color: mode === 'ai' ? '#fff' : 'var(--text-muted)', fontWeight: 700 }}>AI study quizzes</button>
+      </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div className="mono" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {GENRES.map(g => (
@@ -60,12 +67,17 @@ export default function QuizBrowser({ token, onSelectQuiz }: Props) {
           ))}
         </div>
 
-        <button onClick={() => setShowCreate(true)} style={{
+        <div style={{ display: 'flex', gap: 8 }}><button onClick={() => setShowAI(true)} style={{
+          padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', fontWeight: 700,
+          border: '1px solid var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent-bright)',
+        }}>
+          ✦ Generate with AI
+        </button><button onClick={() => setShowCreate(true)} style={{
           padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', fontWeight: 700,
           border: '1px dashed var(--border-bright)', background: 'transparent', color: 'var(--text-muted)',
         }}>
           + Create Your Own
-        </button>
+        </button></div>
       </div>
 
       {loading ? (
@@ -89,6 +101,7 @@ export default function QuizBrowser({ token, onSelectQuiz }: Props) {
       {showCreate && (
         <CreateQuizModal onClose={() => setShowCreate(false)} onCreate={handleCreateQuiz} />
       )}
+      {showAI && <AIQuizModal token={token} onClose={() => setShowAI(false)} onSaved={async generatedGenre => { setGenre(generatedGenre); setMode('ai'); }} />}
     </div>
   );
 }

@@ -50,7 +50,7 @@ export default function Home() {
           marginBottom: '2.5rem', maxWidth: 480, margin: '0 auto 2.5rem',
         }}>
           Create rooms, challenge friends, and compete live.
-          See who's the fastest mind in real time.
+          See who&apos;s the fastest mind in real time.
         </p>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>

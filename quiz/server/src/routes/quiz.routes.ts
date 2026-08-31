@@ -7,12 +7,39 @@ import {
   deleteQuiz,
   QuizValidationError,
 } from "../services/quiz.service";
+import multer from "multer";
+import { generateQuiz } from "../services/aiQuiz.service";
 
 const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+});
+
+router.post("/generate", authMiddleware, upload.single("file"), async (req: AuthRequest, res) => {
+  const difficulty = ["easy", "medium", "hard"].includes(req.body.difficulty)
+    ? req.body.difficulty
+    : "medium";
+  const questionCount = Math.min(20, Math.max(3, Number(req.body.questionCount) || 10));
+
+  try {
+    const draft = await generateQuiz({
+      prompt: req.body.prompt,
+      difficulty,
+      questionCount,
+      genre: req.body.genre,
+      file: req.file,
+    });
+    res.json(draft);
+  } catch (err) {
+    res.status(400).json({ message: err instanceof Error ? err.message : "Quiz generation failed" });
+  }
+});
 
 router.get("/", authMiddleware, async (req: AuthRequest, res) => {
   const genre = typeof req.query.genre === "string" ? req.query.genre : undefined;
-  const quizzes = await getAllQuizzes(genre);
+  const mode = req.query.mode === "ai" || req.query.mode === "classic" ? req.query.mode : undefined;
+  const quizzes = await getAllQuizzes(genre, mode);
   res.json(quizzes);
 });
 

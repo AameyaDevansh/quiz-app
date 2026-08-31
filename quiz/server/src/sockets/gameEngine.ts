@@ -14,6 +14,10 @@ import {
   expireRoomSoon,
   calculateAward,
   BASE_POINTS_FALLBACK,
+  acquireStartLock,
+  releaseStartLock,
+  isRoomPlayer,
+  markRoomEnded,
 } from "./roomState";
 import { scheduleTimerJob } from "../jobs/questionTimer";
 
@@ -40,20 +44,26 @@ const sampleQuestions = <T,>(pool: T[], count: number): T[] => {
 };
 
 export const startQuiz = async (io: Server, roomCode: string, requesterClerkId: string) => {
-  const meta = await redis.hGetAll(metaKey(roomCode));
-  if (!meta || Object.keys(meta).length === 0) throw new GameError("Room not found");
-  if (meta.host !== requesterClerkId) throw new GameError("Only the host can start the quiz");
-  if (meta.status !== "waiting") throw new GameError("Quiz already started");
+  if (!(await acquireStartLock(roomCode))) throw new GameError("Quiz is already starting");
 
-  const quiz = await Quiz.findById(meta.quizId);
-  if (!quiz) throw new GameError("Quiz not found");
-  if (quiz.questions.length === 0) throw new GameError("Quiz has no questions");
+  try {
+    const meta = await redis.hGetAll(metaKey(roomCode));
+    if (!meta || Object.keys(meta).length === 0) throw new GameError("Room not found");
+    if (meta.host !== requesterClerkId) throw new GameError("Only the host can start the quiz");
+    if (meta.status !== "waiting") throw new GameError("Quiz already started");
 
-  const roundQuestions = sampleQuestions(quiz.questions, Math.min(QUESTIONS_PER_GAME, quiz.questions.length));
-  await cacheQuiz(roomCode, { ...quiz.toObject(), questions: roundQuestions });
-  await redis.hSet(metaKey(roomCode), "status", "active");
+    const quiz = await Quiz.findById(meta.quizId);
+    if (!quiz) throw new GameError("Quiz not found");
+    if (quiz.questions.length === 0) throw new GameError("Quiz has no questions");
 
-  await advanceQuestion(io, roomCode, 0);
+    const roundQuestions = sampleQuestions(quiz.questions, Math.min(QUESTIONS_PER_GAME, quiz.questions.length));
+    await cacheQuiz(roomCode, { ...quiz.toObject(), questions: roundQuestions });
+    await redis.hSet(metaKey(roomCode), "status", "active");
+
+    await advanceQuestion(io, roomCode, 0);
+  } finally {
+    await releaseStartLock(roomCode);
+  }
 };
 
 export const advanceQuestion = async (io: Server, roomCode: string, index: number) => {
@@ -108,6 +118,8 @@ export const submitAnswer = async (
     return { duplicate: true };
   }
 
+  if (!(await isRoomPlayer(roomCode, clerkId))) return { duplicate: true };
+
   const quiz = await getCachedQuiz(roomCode);
   if (!quiz) return { duplicate: true };
 
@@ -152,13 +164,12 @@ export const revealAndAdvance = async (io: Server, roomCode: string, questionInd
 };
 
 export const endQuiz = async (io: Server, roomCode: string) => {
+  if (!(await markRoomEnded(roomCode))) return;
   const meta = await redis.hGetAll(metaKey(roomCode));
-  if (!meta || meta.status === "ended") return; // already ended — never double-persist a Match
+  if (!meta || Object.keys(meta).length === 0) return;
 
   const snapshot = await buildRoomSnapshot(roomCode);
   const quiz = await getCachedQuiz(roomCode);
-
-  await redis.hSet(metaKey(roomCode), "status", "ended");
 
   const winner = snapshot?.players[0];
 

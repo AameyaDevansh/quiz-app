@@ -13,6 +13,9 @@ export interface IQuiz extends Document {
   title: string;
   description?: string;
   genre: string;
+  difficulty: "easy" | "medium" | "hard";
+  mode: "classic" | "ai";
+  source?: string;
   questions: IQuestion[];
   createdBy: mongoose.Types.ObjectId | "AI";
 }
@@ -34,6 +37,9 @@ const QuizSchema = new Schema<IQuiz>(
     title: { type: String, required: true },
     description: { type: String },
     genre: { type: String, required: true, index: true },
+    difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "medium", index: true },
+    mode: { type: String, enum: ["classic", "ai"], default: "classic", index: true },
+    source: { type: String },
 
     questions: {
       type: [QuestionSchema],

@@ -37,8 +37,10 @@ export const scheduleTimerJob = async (
       // deterministic id: re-scheduling the same (room, question, kind) replaces
       // rather than stacking duplicate jobs
       jobId: `${roomCode}:${questionIndex}:${kind}`,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
       removeOnComplete: true,
-      removeOnFail: true,
+      removeOnFail: 100,
     }
   );
 };

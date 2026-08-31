@@ -5,6 +5,9 @@ interface CreateQuizInput {
   title: string;
   description?: string;
   genre: string;
+  difficulty?: "easy" | "medium" | "hard";
+  mode?: "classic" | "ai";
+  source?: string;
   questions: {
     question: string;
     options?: string[];
@@ -22,6 +25,12 @@ export class QuizValidationError extends Error {}
 const validateQuizInput = (data: CreateQuizInput) => {
   if (!data.title?.trim()) throw new QuizValidationError("Title is required");
   if (!data.genre?.trim()) throw new QuizValidationError("Genre is required");
+  if (data.difficulty && !["easy", "medium", "hard"].includes(data.difficulty)) {
+    throw new QuizValidationError("Invalid difficulty");
+  }
+  if (data.mode && !["classic", "ai"].includes(data.mode)) {
+    throw new QuizValidationError("Invalid quiz mode");
+  }
   if (!Array.isArray(data.questions) || data.questions.length === 0) {
     throw new QuizValidationError("At least one question is required");
   }
@@ -51,13 +60,19 @@ export const createQuiz = async (data: CreateQuizInput, user: IUser) => {
     title: data.title,
     description: data.description,
     genre: data.genre,
+    difficulty: data.difficulty ?? "medium",
+    mode: data.mode ?? "classic",
+    source: data.source,
     questions: data.questions,
     createdBy: user._id,
   });
 };
 
-export const getAllQuizzes = async (genre?: string) => {
-  const filter = genre ? { genre } : {};
+export const getAllQuizzes = async (genre?: string, mode?: "classic" | "ai") => {
+  const filter: Record<string, unknown> = {};
+  if (genre) filter.genre = genre;
+  if (mode === "ai") filter.mode = "ai";
+  if (mode === "classic") filter.$or = [{ mode: "classic" }, { mode: { $exists: false } }];
   return Quiz.find(filter)
     .select(ANSWER_STRIP)
     .populate("createdBy", "username")

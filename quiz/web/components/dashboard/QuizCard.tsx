@@ -52,6 +52,8 @@ export default function QuizCard({ quiz, onPlay, onDelete, isOwner }: Props) {
       {/* Meta */}
       <div style={{ display: 'flex', gap: '1rem' }}>
         <Chip label={`${quiz?.questions.length} Qs`} />
+        <Chip label={quiz.difficulty ?? 'medium'} />
+        {quiz.mode === 'ai' && <Chip label="AI study" />}
       </div>
 
       {/* Actions */}

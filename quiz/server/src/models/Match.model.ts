@@ -11,7 +11,7 @@ export interface IMatch extends Document {
 
 const MatchSchema = new Schema<IMatch>(
   {
-    matchCode: { type: String, required: true, index: true },
+    matchCode: { type: String, required: true, unique: true },
 
     players: [
       { type: Schema.Types.ObjectId, ref: "User", required: true },

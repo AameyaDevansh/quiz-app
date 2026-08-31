@@ -14,6 +14,7 @@ export const scoresKey = (code: string) => `room:${code}:scores`;
 export const answeredKey = (code: string, questionIndex: number) =>
   `room:${code}:answered:${questionIndex}`;
 export const quizCacheKey = (code: string) => `room:${code}:quiz`;
+export const startLockKey = (code: string) => `room:${code}:start-lock`;
 
 export interface RoomPlayer {
   socketId: string;
@@ -181,10 +182,35 @@ export const getScore = async (roomCode: string, clerkId: string): Promise<numbe
   return score ?? 0;
 };
 
+export const isRoomPlayer = async (roomCode: string, clerkId: string): Promise<boolean> =>
+  (await redis.hExists(playersKey(roomCode), clerkId)) === 1;
+
+export const acquireStartLock = async (roomCode: string): Promise<boolean> => {
+  const result = await redis.set(startLockKey(roomCode), "1", { NX: true, EX: 30 });
+  return result === "OK";
+};
+
+export const releaseStartLock = async (roomCode: string) => {
+  await redis.del(startLockKey(roomCode));
+};
+
+export const markRoomEnded = async (roomCode: string): Promise<boolean> => {
+  const result = await redis.eval(
+    `if redis.call('HGET', KEYS[1], 'status') ~= 'active' then return 0 end
+     redis.call('HSET', KEYS[1], 'status', 'ended')
+     return 1`,
+    { keys: [metaKey(roomCode)], arguments: [] }
+  );
+  return Number(result) === 1;
+};
+
 // ── Room lifecycle ───────────────────────────────────────────────────────
 
 export const deleteRoom = async (roomCode: string) => {
-  await redis.del([metaKey(roomCode), playersKey(roomCode), scoresKey(roomCode), quizCacheKey(roomCode)]);
+  await redis.del([
+    metaKey(roomCode), playersKey(roomCode), scoresKey(roomCode),
+    quizCacheKey(roomCode), startLockKey(roomCode),
+  ]);
   await redis.sRem(PUBLIC_ROOMS_KEY, roomCode);
 };
 

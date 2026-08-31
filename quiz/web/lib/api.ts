@@ -65,6 +65,9 @@ export const GENRES = [
   'history',
   'entertainment',
   'science',
+  'current affairs',
+  'movies',
+  'business',
 ] as const;
 
 export type Genre = typeof GENRES[number];
@@ -82,6 +85,9 @@ export interface Quiz {
   title: string;
   description?: string;
   genre: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  mode?: 'classic' | 'ai';
+  source?: string;
   questions: Question[];
   createdBy: string | 'AI' | { _id: string; username: string };
   createdAt: string;
@@ -102,18 +108,36 @@ export interface CreateQuizInput {
   title: string;
   description?: string;
   genre: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  mode?: 'classic' | 'ai';
+  source?: string;
   questions: QuizDraftQuestion[];
 }
 
 export const quizApi = {
-  list: (token: string, genre?: string) =>
-    request<Quiz[]>(`/api/quizzes${genre ? `?genre=${encodeURIComponent(genre)}` : ''}`, { token }),
+  list: (token: string, genre?: string, mode?: 'classic' | 'ai') => {
+    const params = new URLSearchParams();
+    if (genre) params.set('genre', genre);
+    if (mode) params.set('mode', mode);
+    return request<Quiz[]>(`/api/quizzes?${params}`, { token });
+  },
 
   get: (id: string, token: string) =>
     request<Quiz>(`/api/quizzes/${id}`, { token }),
 
   create: (data: CreateQuizInput, token: string) =>
     request<Quiz>('/api/quizzes', { method: 'POST', body: JSON.stringify(data), token }),
+
+  generate: async (data: FormData, token: string) => {
+    const res = await fetch(`${BASE}/api/quizzes/generate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: data,
+    });
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    if (!res.ok) throw new Error(body.message || 'Quiz generation failed');
+    return body as CreateQuizInput;
+  },
 
   delete: (id: string, token: string) =>
     request<{ ok: boolean }>(`/api/quizzes/${id}`, { method: 'DELETE', token }),
